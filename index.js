@@ -41,7 +41,7 @@ async function run() {
             res.send({ token });
         })
 
-        // middlewares 
+        // middle-wares 
         const verifyToken = (req, res, next) => {
             console.log('inside verify token', req.headers.authorization);
             if (!req.headers.authorization) {
