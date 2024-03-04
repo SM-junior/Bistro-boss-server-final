@@ -43,7 +43,6 @@ async function run() {
 
         // middle-wares 
         const verifyToken = (req, res, next) => {
-            console.log('inside verify token', req.headers.authorization);
             if (!req.headers.authorization) {
                 return res.status(401).send({ message: 'unauthorized access' });
             }
@@ -73,6 +72,14 @@ async function run() {
             const result = await menuCollection.find().toArray();
             res.send(result)
         })
+
+        app.post('/menu',verifyToken, verifyAdmin, async(req,res)=>{
+            const newItem=req.body;
+            const result=await menuCollection.insertOne(newItem);
+            res.send(result)
+        })
+
+
         app.get('/review', async (req, res) => {
             const result = await reviewCollection.find().toArray();
             res.send(result)
