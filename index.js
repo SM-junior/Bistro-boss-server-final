@@ -4,6 +4,7 @@ const app = express();
 const cors = require('cors')
 const port = process.env.PORT || 3000;
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 
 app.use(cors());
 app.use(express.json())
@@ -73,16 +74,16 @@ async function run() {
             res.send(result)
         })
 
-        app.post('/menu',verifyToken, verifyAdmin, async(req,res)=>{
-            const newItem=req.body;
-            const result=await menuCollection.insertOne(newItem);
+        app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
+            const newItem = req.body;
+            const result = await menuCollection.insertOne(newItem);
             res.send(result)
         })
 
-        app.delete('/menu/:id', async(req,res)=>{
-            const id=req.params.id;
-            const query={_id: new ObjectId(id)}
-            const result= await menuCollection.deleteOne(query);
+        app.delete('/menu/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await menuCollection.deleteOne(query);
             res.send(result)
         })
 
@@ -130,13 +131,13 @@ async function run() {
         })
 
         //get all logged user from DB
-        app.get('/users', verifyToken,verifyAdmin, async (req, res) => {
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
             const result = await userCollection.find().toArray()
             res.send(result)
         })
 
         //make an user admin
-        app.patch('/users/admin/:id', verifyToken,verifyAdmin, async (req, res) => {
+        app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
 
@@ -167,11 +168,25 @@ async function run() {
         })
 
         //delete an user
-        app.delete('/users/:id',verifyToken,verifyAdmin, async (req, res) => {
+        app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await userCollection.deleteOne(query)
             res.send(result)
+        })
+
+        //payment method...............(>stripe docs a ai code ace)
+
+        app.post('/create-payment-intent', verifyToken, async (req, res) => {
+            const { price } = req.body;
+            const amount = price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            })
+            res.send({ clientSecret: paymentIntent.client_secret })
         })
 
         // Send a ping to confirm a successful connection
