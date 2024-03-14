@@ -34,6 +34,7 @@ async function run() {
         const reviewCollection = client.db("bistroDb-1").collection("reviews-1");
         const cartCollection = client.db("bistroDb-1").collection("carts-1");
         const userCollection = client.db("bistroDb-1").collection("users-1");
+        const paymentCollection = client.db("bistroDb-1").collection("payments-1");
 
         //JWT
         app.post('/jwt', async (req, res) => {
@@ -175,7 +176,7 @@ async function run() {
             res.send(result)
         })
 
-        //payment method...............(>stripe docs a ai code ace)
+        //payment method...............(>stripe docs a ai code ace)..................................
 
         app.post('/create-payment-intent', verifyToken, async (req, res) => {
             const { price } = req.body;
@@ -187,6 +188,17 @@ async function run() {
                 payment_method_types: ['card']
             })
             res.send({ clientSecret: paymentIntent.client_secret })
+        })
+
+        //adding payment details to the database.......................................................
+        app.post('/payments', verifyToken, async(req,res)=>{
+            const payment=req.body;
+            const insertedResult= await paymentCollection.insertOne(payment);
+            //delete item from cart according to the various user who added item to the cart
+            const query={_id: {$in: payment.cartItems.map(id=>new ObjectId(id))}};
+            const deleteResult= await cartCollection.deleteMany(query)
+
+            res.send({insertedResult, deleteResult})
         })
 
         // Send a ping to confirm a successful connection
