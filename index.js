@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json())
 
 app.get('/', (req, res) => {
-    res.send('server is running')
+    res.send('bistro server is running')
 })
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -191,14 +191,60 @@ async function run() {
         })
 
         //adding payment details to the database.......................................................
-        app.post('/payments', verifyToken, async(req,res)=>{
-            const payment=req.body;
-            const insertedResult= await paymentCollection.insertOne(payment);
+        app.post('/payments', verifyToken, async (req, res) => {
+            const payment = req.body;
+            const insertedResult = await paymentCollection.insertOne(payment);
             //delete item from cart according to the various user who added item to the cart
-            const query={_id: {$in: payment.cartItems.map(id=>new ObjectId(id))}};
-            const deleteResult= await cartCollection.deleteMany(query)
+            const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } };
+            const deleteResult = await cartCollection.deleteMany(query)
 
-            res.send({insertedResult, deleteResult})
+            res.send({ insertedResult, deleteResult })
+        })
+
+        //admin stats..................................
+        app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
+            const users = await userCollection.estimatedDocumentCount();
+            const products = await menuCollection.estimatedDocumentCount();
+            const orders = await paymentCollection.estimatedDocumentCount();
+            const payments = await paymentCollection.find().toArray();
+            const revenue = payments.reduce((sum, item) => sum + item.price, 0)
+            res.send({ users, products, orders, revenue })
+        })
+
+        app.get('/order-status', async (req, res) => {
+            const result = await paymentCollection.aggregate([
+                {
+                    $unwind: "$menuItems"
+                },
+                {
+                    $lookup: {
+                        from: "menu-1",
+                        localField: "menuItems",
+                        foreignField: "_id",
+                        as: "menuItemss"
+                    }
+                },
+                {
+                    $unwind: "$menuItemss"
+                },
+                {
+                    $group: {
+                        _id: "$menuItemss.category",
+                        quantity: { $sum: 1 },
+                        revenue: { $sum: "$menuItemss.price" }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: 1,
+                        quantity: 1,
+                        revenue: 1
+                    }
+                }
+            ]).toArray()
+
+            res.send(result);
         })
 
         // Send a ping to confirm a successful connection
