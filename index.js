@@ -237,9 +237,9 @@ async function run() {
                 {
                     $project: {
                         _id: 0,
-                        category: 1,
-                        quantity: 1,
-                        revenue: 1
+                        category: '$_id',
+                        quantity: '$quantity',
+                        revenue: '$revenue'
                     }
                 }
             ]).toArray()
